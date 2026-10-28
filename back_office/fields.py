@@ -51,3 +51,22 @@ def settle_yes_value(settlement: dict) -> float | None:
     if settlement.get("value") is not None:
         return num(settlement["value"]) / 100.0
     return None
+
+
+SETTLED_STATUSES = ("finalized", "settled")
+
+
+def historical_settle_value(market: dict) -> float | None:
+    """YES payout per contract from a /historical/markets record.
+
+    Markets that settled before the live settlements endpoint's retention window
+    only appear there, with `settlement_value_dollars`. A market that is not
+    final yet, or carries no value, returns None (still open), never 0.0: a
+    silent zero would book every YES winner as a loss.
+    """
+    if market.get("status") not in SETTLED_STATUSES:
+        return None
+    v = market.get("settlement_value_dollars")
+    if v in (None, ""):
+        return None
+    return num(v)

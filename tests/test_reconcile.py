@@ -6,12 +6,17 @@ from back_office.reconcile import Snapshot, reconcile
 TK = "KXEXAMPLE-26JAN01-A"
 
 
+AS_OF = 1_767_225_600
+YEAR = 365 * 86_400
+
+
 def snap(fills=(), positions=(), settlements=(), balance_cents=0, pv_cents=0,
-         deposits=(), withdrawals=()):
-    return Snapshot(as_of=1_767_225_600, balance_cents=balance_cents,
+         deposits=(), withdrawals=(), historical_markets=()):
+    return Snapshot(as_of=AS_OF, balance_cents=balance_cents,
                     portfolio_value_cents=pv_cents, deposits=list(deposits),
                     withdrawals=list(withdrawals), positions=list(positions),
-                    fills=list(fills), settlements=list(settlements))
+                    fills=list(fills), settlements=list(settlements),
+                    historical_markets=list(historical_markets))
 
 
 def position(ticker, pos, realized, fees=None):
@@ -25,8 +30,11 @@ def kinds(result):
     return sorted(b.kind for b in result.breaks)
 
 
-def funded(amount_cents):
-    return [{"amount_cents": amount_cents, "status": "applied"}]
+def funded(amount_cents, created_ts=None):
+    d = {"amount_cents": amount_cents, "status": "applied"}
+    if created_ts is not None:
+        d["created_ts"] = created_ts
+    return [d]
 
 
 # ---- regression: positions held to settlement --------------------------------
@@ -134,6 +142,101 @@ def test_cash_identity_break_when_cash_does_not_tie():
     r = reconcile(snap(balance_cents=95_000, deposits=funded(100_000)))
     assert kinds(r) == ["cash_identity"]
     assert round(r.cash_identity_residual, 2) == -50.00
+
+
+# ---- regression: markets that settled before the live window ------------------
+
+def test_market_settled_before_the_live_window_closes_from_the_archive():
+    """Regression. Kalshi's settlements endpoint only covers recent markets, and
+    its positions endpoint drops old ones entirely. On a live account with ~4,800
+    traded markets, ~2,600 old ones never closed in the engine, and the cash
+    identity was off by $99k with no per-market break to say why."""
+    old = "KXEXAMPLE-25JUN01-OLD"
+    fills = [make_fill("yes", 100, 0.30, ticker=old)]
+    archive = [{"ticker": old, "status": "finalized", "settlement_value_dollars": "1.0000"}]
+    # $100 in, bought 100 YES @ 0.30, won $1 each -> $170 cash, nothing open
+    r = reconcile(snap(fills, balance_cents=17_000, deposits=funded(10_000),
+                       historical_markets=archive))
+    assert r.breaks == [] and r.markets[old].settled
+    # without the archive the engine thinks the $30 is still tied up in an open lot
+    r = reconcile(snap(fills, balance_cents=17_000, deposits=funded(10_000)))
+    assert not r.markets[old].settled
+    assert round(r.cash_identity_residual, 2) == 100.00
+
+
+def test_live_settlement_wins_over_the_archive():
+    fills = [make_fill("yes", 10, 0.50, ticker=TK)]
+    live = [{"ticker": TK, "market_result": "yes"}]
+    archive = [{"ticker": TK, "status": "finalized", "settlement_value_dollars": "0.0000"}]
+    r = reconcile(snap(fills, settlements=live, historical_markets=archive))
+    assert round(r.markets[TK].settled_pnl, 2) == 5.00
+
+
+# ---- cash identity: non-trading cash ------------------------------------------
+
+def test_interest_sized_residual_is_reported_not_a_break():
+    # $1,000 funded a year ago, $35 of interest credited, no trades
+    r = reconcile(snap(balance_cents=103_500, deposits=funded(100_000, AS_OF - YEAR)))
+    assert r.breaks == []
+    assert round(r.cash_identity_residual, 2) == 35.00
+
+
+def test_more_than_interest_could_explain_is_a_break():
+    # 6% of $1,000 for a year is $60; $500 unexplained is missing settlements or fills
+    r = reconcile(snap(balance_cents=150_000, deposits=funded(100_000, AS_OF - YEAR)))
+    assert kinds(r) == ["cash_identity"]
+    assert "more than interest could explain" in r.breaks[0].detail
+
+
+def test_residual_jump_between_runs_is_a_break():
+    deps = funded(100_000, AS_OF - YEAR)
+    assert reconcile(snap(balance_cents=103_600, deposits=deps), prev_residual=35.0).breaks == []
+    r = reconcile(snap(balance_cents=103_500, deposits=deps), prev_residual=0.0)
+    assert kinds(r) == ["cash_drift"]
+
+
+def test_drift_tolerance_allows_a_month_of_interest_on_a_large_balance():
+    assert rc.drift_tolerance(500.0) == rc.CASH_DRIFT_FLOOR
+    assert round(rc.drift_tolerance(13_000.0), 2) == 65.00      # one month at 6%
+    # a $40 monthly interest credit on $13k is not a break
+    deps = funded(1_300_000, AS_OF - YEAR)
+    r = reconcile(snap(balance_cents=1_304_000, deposits=deps), prev_residual=0.0)
+    assert "cash_drift" not in kinds(r)
+
+
+# ---- re-check before reporting ----------------------------------------------------
+
+class FreshClient:
+    """Single-market lookups as they look a few seconds after the snapshot."""
+    def __init__(self, positions, fills=(), settlements=()):
+        self.positions, self.fills, self.settlements = positions, list(fills), list(settlements)
+
+    def get_positions(self, ticker=None):
+        return [p for p in self.positions if p["ticker"] == ticker]
+
+    def get_fills(self, ticker=None, include_historical=True):
+        return [f for f in self.fills if f["ticker"] == ticker]
+
+    def get_settlements(self, ticker=None):
+        return [s for s in self.settlements if s["ticker"] == ticker]
+
+
+def test_break_from_a_fill_that_landed_mid_snapshot_clears_on_recheck():
+    # the positions call already saw a second fill that the fills call missed
+    first = make_fill("yes", 100, 0.30, ticker=TK, fill_id="f1")
+    second = make_fill("yes", 50, 0.32, ticker=TK, fill_id="f2", t="2026-01-02T00:00:00Z")
+    s = snap([first], [position(TK, 150, 0.0)], deposits=funded(3_000))   # $30 now in the lot
+    r = reconcile(s)
+    assert kinds(r) == ["position_mismatch"]
+    r = rc.recheck(FreshClient([position(TK, 150, 0.0)], [first, second]), s, r)
+    assert r.breaks == [] and r.rechecked_clean == 1
+
+
+def test_real_break_survives_recheck():
+    fills = [make_fill("yes", 200, 0.10, ticker=TK)]
+    s = snap(fills, [position(TK, 170, 0.0)], deposits=funded(2_000))
+    r = rc.recheck(FreshClient([position(TK, 170, 0.0)], fills), s, reconcile(s))
+    assert kinds(r) == ["position_mismatch"] and r.rechecked_clean == 0
 
 
 def test_breaks_are_sorted_largest_first():

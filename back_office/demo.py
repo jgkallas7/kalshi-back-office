@@ -41,6 +41,10 @@ class FixtureClient:
     def get_settlements(self):
         return self.data["settlements"]
 
+    def get_historical_markets(self, tickers):
+        wanted = set(tickers)
+        return [m for m in self.data.get("historical_markets", []) if m["ticker"] in wanted]
+
     def get_deposits(self):
         return self.data["deposits"]
 
@@ -53,10 +57,12 @@ class FixtureClient:
 
 def snapshot_from(client: FixtureClient) -> Snapshot:
     bal, pv = client.get_balance()
+    fills, settlements = client.get_fills(), client.get_settlements()
+    older = {f["ticker"] for f in fills} - {s["ticker"] for s in settlements}
     return Snapshot(as_of=client.data["as_of_ts"], balance_cents=bal, portfolio_value_cents=pv,
                     deposits=client.get_deposits(), withdrawals=client.get_withdrawals(),
-                    positions=client.get_positions(), fills=client.get_fills(),
-                    settlements=client.get_settlements())
+                    positions=client.get_positions(), fills=fills, settlements=settlements,
+                    historical_markets=client.get_historical_markets(older))
 
 
 def run_demo(out_dir: str = "demo_output") -> str:
@@ -69,8 +75,10 @@ def run_demo(out_dir: str = "demo_output") -> str:
     try:
         init_db(conn)
         prior = client.data["prior_run"]          # yesterday's run, for daily P&L
-        conn.execute("INSERT INTO recon_runs (run_ts, equity, net_deposits) VALUES (?,?,?)",
-                     (prior["run_ts"], prior["equity"], prior["net_deposits"]))
+        conn.execute("INSERT INTO recon_runs (run_ts, equity, net_deposits, "
+                     "cash_identity_residual) VALUES (?,?,?,?)",
+                     (prior["run_ts"], prior["equity"], prior["net_deposits"],
+                      prior["cash_identity_residual"]))
         snap = snapshot_from(client)
         added = events.capture(conn, snap.fills, snap.settlements, client.get_resting_orders(),
                                now=snap.as_of)

@@ -16,10 +16,12 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 
 from .fields import fill_side, num
-from .reconcile import ReconResult, Snapshot, baseline_run, persist, reconcile
+from .reconcile import (ReconResult, Snapshot, baseline_run, persist, previous_residual,
+                        recheck, reconcile, residual_note)
 
 DAY = 86_400
 BASELINE_MIN_AGE = 72_000          # 20h: the baseline must be at least this old
+BASELINE_MAX_AGE_H = 30            # older than this, a daily run was missed
 
 
 def _ts(iso: str) -> float:
@@ -59,20 +61,32 @@ class Statement:
     recon: ReconResult
     activity: Activity
     daily_pnl: float | None
+    baseline_age_h: float | None = None
+
+    @property
+    def window(self) -> str:
+        """'vs ~24h ago', or the real span when a missed run stretched it, so a
+        two-day move is never presented as one day's P&L."""
+        if self.baseline_age_h is None or self.baseline_age_h <= BASELINE_MAX_AGE_H:
+            return "vs ~24h ago"
+        return f"vs {self.baseline_age_h:.0f}h ago: a daily run was missed"
 
     @property
     def date(self) -> str:
         return datetime.fromtimestamp(self.recon.as_of, timezone.utc).strftime("%Y-%m-%d")
 
 
-def build(s: Snapshot, conn: sqlite3.Connection) -> Statement:
-    r = reconcile(s)
+def build(s: Snapshot, conn: sqlite3.Connection, client=None) -> Statement:
+    r = reconcile(s, previous_residual(conn, s.as_of))
+    if client is not None:
+        r = recheck(client, s, r)
     base = baseline_run(conn, r.as_of - BASELINE_MIN_AGE)
-    daily = None
+    daily = age_h = None
     if base:
         daily = (r.equity - base["equity"]) - (r.net_deposits - base["net_deposits"])
+        age_h = (r.as_of - base["run_ts"]) / 3600
     persist(conn, r)
-    return Statement(r, trailing_activity(s, r.as_of - DAY), daily)
+    return Statement(r, trailing_activity(s, r.as_of - DAY), daily, age_h)
 
 
 def _z(x: float) -> float:
@@ -86,10 +100,11 @@ def render_text(st: Statement) -> str:
     lines = [
         f"Kalshi Account Statement - {st.date}",
         f"Equity ${r.equity:,.2f}  (cash ${r.cash:,.2f} + positions ${r.portfolio_value:,.2f})",
-        f"Daily P&L (vs ~24h ago): {dp}",
+        f"Daily P&L ({st.window}): {dp}",
         f"Lifetime cash P&L: ${r.cash_pnl:+,.2f}   net deposits ${r.net_deposits:,.2f}",
-        f"Engine: realized ${r.engine_realized_net:+,.2f} net of fees, open ${r.engine_open_pnl:+,.2f}, "
-        f"cash identity residual ${_z(r.cash_identity_residual):+,.2f}",
+        f"Engine: realized ${r.engine_realized_net:+,.2f} net of fees, open ${_z(r.engine_open_pnl):+,.2f}",
+        f"Non-trading cash (interest, rewards): ${_z(r.cash_identity_residual):+,.2f}  "
+        f"({residual_note(r)})",
         f"Open: {r.open_positions} positions, exposure ${r.open_exposure:,.2f}",
         f"Last 24h: {a.n_fills} fills, fees ${a.fees:,.2f}, {a.n_settled} settlements",
         f"Fee drag (24h): {a.taker_pct:.0f}% of fees from taker fills, {a.fee_rate:.2f}% of notional",
@@ -136,7 +151,8 @@ def render_html(st: Statement) -> str:
     e = html.escape
     kpis = [
         ("Equity", _money(r.equity)),
-        ("Daily P&amp;L", "n/a" if st.daily_pnl is None else _money(st.daily_pnl, True)),
+        ("Daily P&amp;L" if st.window == "vs ~24h ago" else "P&amp;L since last run",
+         "n/a" if st.daily_pnl is None else _money(st.daily_pnl, True)),
         ("Lifetime P&amp;L", _money(r.cash_pnl, True)),
         ("Breaks", str(len(r.breaks))),
     ]
@@ -150,7 +166,7 @@ def render_html(st: Statement) -> str:
         ("Lifetime cash P&amp;L", _money(r.cash_pnl, True)),
         ("Engine realized P&amp;L, net of fees", _money(r.engine_realized_net, True)),
         ("Engine open P&amp;L at mark", _money(r.engine_open_pnl, True)),
-        ("Cash identity residual", _money(r.cash_identity_residual, True)),
+        ("Non-trading cash (interest, rewards)", _money(r.cash_identity_residual, True)),
     ]
     tie_html = "".join(f'<tr><td>{k}</td><td class="n">{v}</td></tr>' for k, v in tie)
 

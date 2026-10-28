@@ -83,6 +83,23 @@ def test_live_and_historical_fills_are_merged_without_duplicates(key):
     assert sorted(f["fill_id"] for f in c.get_fills()) == ["0", "1", "2"]
 
 
+def test_historical_markets_are_looked_up_in_ticker_batches(key):
+    path = "/trade-api/v2/historical/markets"
+    c = client(key, {path: [FakeResponse({"markets": [{"ticker": "A"}]}),
+                            FakeResponse({"markets": [{"ticker": "C"}]})]})
+    got = c.get_historical_markets(["A", "B", "C"], batch=2)
+    assert [m["ticker"] for m in got] == ["A", "C"]
+    assert [p["tickers"] for _, p, _ in c.session.calls] == ["A,B", "C"]
+
+
+def test_single_market_lookups_pass_the_ticker(key):
+    c = client(key, {"/trade-api/v2/portfolio/positions": [FakeResponse({"market_positions": []})],
+                     "/trade-api/v2/portfolio/fills": [FakeResponse({"fills": []})]})
+    c.get_positions(ticker="T")
+    c.get_fills(ticker="T", include_historical=False)
+    assert [p.get("ticker") for _, p, _ in c.session.calls] == ["T", "T"]
+
+
 def test_positions_request_includes_settled_markets(key):
     path = "/trade-api/v2/portfolio/positions"
     c = client(key, {path: [FakeResponse({"market_positions": []})]})

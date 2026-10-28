@@ -38,7 +38,8 @@ def main(argv: list[str] | None = None) -> int:
     _load_env()
     from . import events
     from .client import KalshiClient, KalshiError
-    from .reconcile import fetch_snapshot, persist, reconcile, render_report
+    from .reconcile import (fetch_snapshot, persist, previous_residual, recheck, reconcile,
+                            render_report)
     from .statement import build, render_text, write_html
 
     try:
@@ -55,12 +56,12 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         snap = fetch_snapshot(client)
         if args.command == "reconcile":
-            r = reconcile(snap)
+            r = recheck(client, snap, reconcile(snap, previous_residual(conn, snap.as_of)))
             persist(conn, r)
             print(render_report(r))
             return 1 if r.breaks else 0
         events.capture(conn, snap.fills, snap.settlements, client.get_resting_orders())
-        st = build(snap, conn)
+        st = build(snap, conn, client)
         print(render_text(st))
         print(f"\nHTML statement: {write_html(st, args.out)}")
         return 0

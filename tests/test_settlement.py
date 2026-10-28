@@ -1,6 +1,6 @@
 from conftest import make_fill
 
-from back_office.fields import settle_yes_value
+from back_office.fields import historical_settle_value, settle_yes_value
 from back_office.pnl import compute_market
 
 
@@ -43,3 +43,11 @@ def test_settlement_value_parsing():
     assert settle_yes_value({"market_result": "no", "value": 0}) == 0.0
     assert settle_yes_value({"market_result": "scalar", "value": 37}) == 0.37
     assert settle_yes_value({"market_result": ""}) is None
+
+
+def test_archive_settlement_value_only_when_final():
+    assert historical_settle_value({"status": "finalized", "settlement_value_dollars": "1.0000"}) == 1.0
+    assert historical_settle_value({"status": "settled", "settlement_value_dollars": "0.3700"}) == 0.37
+    # not final yet, or no value: still open, never a silent 0.0
+    assert historical_settle_value({"status": "active", "settlement_value_dollars": None}) is None
+    assert historical_settle_value({"status": "finalized", "settlement_value_dollars": ""}) is None

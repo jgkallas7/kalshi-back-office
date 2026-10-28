@@ -29,14 +29,18 @@ def test_demo_account_flags_exactly_the_planted_problems():
     found = {(b.kind, b.ticker) for b in r.breaks}
     assert found == {("position_mismatch", "KXEXAMPLE-26JAN14-F"),
                      ("fee_mismatch", "KXEXAMPLE-26JAN10-A")}
-    assert abs(r.cash_identity_residual) < 0.01      # cash ties out
-    assert sum(m.settled for m in r.markets.values()) == 3
+    assert round(r.cash_identity_residual, 2) == 2.14   # the interest, and nothing else
+    assert sum(m.settled for m in r.markets.values()) == 4
+    # the old market is closed from the archive, not left open forever
+    old = r.markets["KXEXAMPLE-25NOV08-G"]
+    assert old.settled and old.position == 0 and round(old.settled_pnl, 2) == 97.50
 
 
 def test_demo_runs_end_to_end(tmp_path, capsys):
     path = run_demo(str(tmp_path))
     out = capsys.readouterr().out
     assert "2 RECONCILIATION BREAK(S)" in out
+    assert "Non-trading cash (interest, rewards): $+2.14  (+0.07 since the last run)" in out
     assert "Daily P&L (vs ~24h ago): $+41.37" in out
     html = open(path).read()
     assert "Kalshi Account Statement" in html and "KXEXAMPLE-26JAN14-F" in html

@@ -111,24 +111,43 @@ class KalshiClient:
         b = self.get(f"{API}/portfolio/balance")
         return int(b.get("balance") or 0), int(b.get("portfolio_value") or 0)
 
-    def get_fills(self, include_historical: bool = True) -> list[dict]:
+    def get_fills(self, include_historical: bool = True, ticker: str | None = None) -> list[dict]:
         """All fills. Kalshi moves fills older than its live retention window to a
         separate /historical endpoint; both are merged and de-duplicated by fill_id
         so the engine always sees each market's complete history."""
-        fills = self.paginate(f"{API}/portfolio/fills", "fills")
+        params = {"ticker": ticker} if ticker else None
+        fills = self.paginate(f"{API}/portfolio/fills", "fills", params=params)
         if include_historical:
             seen = {f.get("fill_id") for f in fills}
-            fills += [f for f in self.paginate(f"{API}/historical/fills", "fills")
+            fills += [f for f in self.paginate(f"{API}/historical/fills", "fills", params=params)
                       if f.get("fill_id") not in seen]
         return fills
 
-    def get_positions(self) -> list[dict]:
-        """Per-market positions, including settled and flat markets."""
-        return self.paginate(f"{API}/portfolio/positions", "market_positions",
-                             params={"settlement_status": "all"})
+    def get_positions(self, ticker: str | None = None) -> list[dict]:
+        """Per-market positions, including settled and flat markets.
 
-    def get_settlements(self) -> list[dict]:
-        return self.paginate(f"{API}/portfolio/settlements", "settlements")
+        Kalshi only keeps recent markets here; older ones drop off entirely."""
+        params = {"settlement_status": "all"}
+        if ticker:
+            params["ticker"] = ticker
+        return self.paginate(f"{API}/portfolio/positions", "market_positions", params=params)
+
+    def get_settlements(self, ticker: str | None = None) -> list[dict]:
+        """Recently settled markets. Older settlements only exist in
+        /historical/markets: see get_historical_markets."""
+        params = {"ticker": ticker} if ticker else None
+        return self.paginate(f"{API}/portfolio/settlements", "settlements", params=params)
+
+    def get_historical_markets(self, tickers, batch: int = 100) -> list[dict]:
+        """Market records (status, result, settlement_value_dollars) from the
+        archive, for markets that settled before the live settlements window.
+        Looked up in batches of tickers."""
+        tickers = list(tickers)
+        out: list[dict] = []
+        for i in range(0, len(tickers), batch):
+            out += self.paginate(f"{API}/historical/markets", "markets",
+                                 params={"tickers": ",".join(tickers[i:i + batch])})
+        return out
 
     def get_deposits(self) -> list[dict]:
         return self.paginate(f"{API}/portfolio/deposits", "deposits")
