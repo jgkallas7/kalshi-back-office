@@ -166,4 +166,4 @@ tests/           offline test suite
 tools/           fixture generator for the demo account
 ```
 
-MIT licensed. Not affiliated with Kalshi.
+Not affiliated with Kalshi.
