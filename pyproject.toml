@@ -1,0 +1,19 @@
+[project]
+name = "kalshi-back-office"
+version = "0.1.0"
+description = "P&L, reconciliation and daily statements for a Kalshi event-contract account"
+requires-python = ">=3.10"
+dependencies = ["requests>=2.31", "cryptography>=42"]
+
+[project.optional-dependencies]
+dotenv = ["python-dotenv>=1.0"]
+test = ["pytest>=8"]
+
+[tool.setuptools]
+packages = ["back_office"]
+
+[tool.setuptools.package-data]
+back_office = ["fixtures/*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

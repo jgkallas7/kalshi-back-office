@@ -1,0 +1,247 @@
+{
+  "_note": "Synthetic sample account. All tickers, prices, sizes and balances are invented.",
+  "as_of": "2026-01-15T22:00:00Z",
+  "as_of_ts": 1768514400,
+  "balance": {
+    "balance": 129720,
+    "portfolio_value": 22960
+  },
+  "deposits": [
+    {
+      "amount_cents": 100000,
+      "status": "applied",
+      "created_ts": "2025-10-28T12:00:00Z"
+    },
+    {
+      "amount_cents": 50000,
+      "status": "applied",
+      "created_ts": "2025-12-02T12:00:00Z"
+    },
+    {
+      "amount_cents": 25000,
+      "status": "pending",
+      "created_ts": "2026-01-15T21:00:00Z"
+    }
+  ],
+  "withdrawals": [
+    {
+      "amount_cents": 20000,
+      "status": "applied",
+      "created_ts": "2026-01-05T12:00:00Z"
+    }
+  ],
+  "fills": [
+    {
+      "fill_id": "demo-fill-003",
+      "order_id": "demo-order-003",
+      "ticker": "KXEXAMPLE-26JAN10-B",
+      "side": "yes",
+      "outcome_side": "yes",
+      "action": "buy",
+      "count_fp": "1000.00",
+      "yes_price_dollars": "0.0400",
+      "no_price_dollars": "0.9600",
+      "fee_cost": "0.7000",
+      "is_taker": false,
+      "created_time": "2026-01-08T14:00:00Z"
+    },
+    {
+      "fill_id": "demo-fill-004",
+      "order_id": "demo-order-004",
+      "ticker": "KXEXAMPLE-26JAN12-C",
+      "side": "no",
+      "outcome_side": "no",
+      "action": "buy",
+      "count_fp": "300.00",
+      "yes_price_dollars": "0.6500",
+      "no_price_dollars": "0.3500",
+      "fee_cost": "2.1000",
+      "is_taker": false,
+      "created_time": "2026-01-11T16:00:00Z"
+    },
+    {
+      "fill_id": "demo-fill-005",
+      "order_id": "demo-order-005",
+      "ticker": "KXEXAMPLE-26JAN14-F",
+      "side": "yes",
+      "outcome_side": "yes",
+      "action": "buy",
+      "count_fp": "200.00",
+      "yes_price_dollars": "0.1000",
+      "no_price_dollars": "0.9000",
+      "fee_cost": "0.6500",
+      "is_taker": false,
+      "created_time": "2026-01-12T13:00:00Z"
+    },
+    {
+      "fill_id": "demo-fill-006",
+      "order_id": "demo-order-006",
+      "ticker": "KXEXAMPLE-26JAN14-F",
+      "side": "no",
+      "outcome_side": "no",
+      "action": "sell",
+      "count_fp": "120.00",
+      "yes_price_dollars": "0.1500",
+      "no_price_dollars": "0.8500",
+      "fee_cost": "0.5500",
+      "is_taker": true,
+      "created_time": "2026-01-13T20:00:00Z"
+    },
+    {
+      "fill_id": "demo-fill-007",
+      "order_id": "demo-order-007",
+      "ticker": "KXEXAMPLE-26JAN18-D",
+      "side": "yes",
+      "outcome_side": "yes",
+      "action": "buy",
+      "count_fp": "500.00",
+      "yes_price_dollars": "0.4000",
+      "no_price_dollars": "0.6000",
+      "fee_cost": "1.7500",
+      "is_taker": false,
+      "created_time": "2026-01-15T14:10:00Z"
+    },
+    {
+      "fill_id": "demo-fill-008",
+      "order_id": "demo-order-008",
+      "ticker": "KXEXAMPLE-26JAN18-D",
+      "side": "no",
+      "outcome_side": "no",
+      "action": "sell",
+      "count_fp": "200.00",
+      "yes_price_dollars": "0.4700",
+      "no_price_dollars": "0.5300",
+      "fee_cost": "1.4000",
+      "is_taker": true,
+      "created_time": "2026-01-15T17:45:00Z"
+    },
+    {
+      "fill_id": "demo-fill-009",
+      "order_id": "demo-order-009",
+      "ticker": "KXEXAMPLE-26JAN20-E",
+      "side": "no",
+      "outcome_side": "no",
+      "action": "buy",
+      "count_fp": "250.00",
+      "yes_price_dollars": "0.7000",
+      "no_price_dollars": "0.3000",
+      "fee_cost": "0.9500",
+      "is_taker": false,
+      "created_time": "2026-01-15T19:20:00Z"
+    }
+  ],
+  "historical_fills": [
+    {
+      "fill_id": "demo-fill-001",
+      "order_id": "demo-order-001",
+      "ticker": "KXEXAMPLE-26JAN10-A",
+      "side": "yes",
+      "outcome_side": "yes",
+      "action": "buy",
+      "count_fp": "400.00",
+      "yes_price_dollars": "0.2200",
+      "no_price_dollars": "0.7800",
+      "fee_cost": "1.5000",
+      "is_taker": false,
+      "created_time": "2025-11-03T15:00:00Z"
+    },
+    {
+      "fill_id": "demo-fill-002",
+      "order_id": "demo-order-002",
+      "ticker": "KXEXAMPLE-26JAN10-A",
+      "side": "no",
+      "outcome_side": "no",
+      "action": "sell",
+      "count_fp": "400.00",
+      "yes_price_dollars": "0.3100",
+      "no_price_dollars": "0.6900",
+      "fee_cost": "1.2000",
+      "is_taker": true,
+      "created_time": "2025-11-20T18:30:00Z"
+    }
+  ],
+  "settlements": [
+    {
+      "ticker": "KXEXAMPLE-26JAN10-A",
+      "market_result": "no",
+      "value": 0,
+      "revenue": 0,
+      "settled_time": "2025-11-22T23:00:00Z"
+    },
+    {
+      "ticker": "KXEXAMPLE-26JAN10-B",
+      "market_result": "no",
+      "value": 0,
+      "revenue": 0,
+      "settled_time": "2026-01-11T01:00:00Z"
+    },
+    {
+      "ticker": "KXEXAMPLE-26JAN12-C",
+      "market_result": "no",
+      "value": 0,
+      "revenue": 30000,
+      "settled_time": "2026-01-15T03:00:00Z"
+    }
+  ],
+  "positions": [
+    {
+      "ticker": "KXEXAMPLE-26JAN10-A",
+      "position_fp": "0.00",
+      "realized_pnl_dollars": "36.0000",
+      "fees_paid_dollars": "2.9500",
+      "market_exposure_dollars": "0.0000"
+    },
+    {
+      "ticker": "KXEXAMPLE-26JAN10-B",
+      "position_fp": "0.00",
+      "realized_pnl_dollars": "-40.0000",
+      "fees_paid_dollars": "0.7000",
+      "market_exposure_dollars": "0.0000"
+    },
+    {
+      "ticker": "KXEXAMPLE-26JAN12-C",
+      "position_fp": "0.00",
+      "realized_pnl_dollars": "195.0000",
+      "fees_paid_dollars": "2.1000",
+      "market_exposure_dollars": "0.0000"
+    },
+    {
+      "ticker": "KXEXAMPLE-26JAN18-D",
+      "position_fp": "300.00",
+      "realized_pnl_dollars": "14.0000",
+      "fees_paid_dollars": "3.1500",
+      "market_exposure_dollars": "120.0000"
+    },
+    {
+      "ticker": "KXEXAMPLE-26JAN20-E",
+      "position_fp": "-250.00",
+      "realized_pnl_dollars": "0.0000",
+      "fees_paid_dollars": "0.9500",
+      "market_exposure_dollars": "75.0000"
+    },
+    {
+      "ticker": "KXEXAMPLE-26JAN14-F",
+      "position_fp": "50.00",
+      "realized_pnl_dollars": "6.0000",
+      "fees_paid_dollars": "1.2000",
+      "market_exposure_dollars": "5.0000"
+    }
+  ],
+  "resting_orders": [
+    {
+      "order_id": "demo-order-900",
+      "ticker": "KXEXAMPLE-26JAN20-E",
+      "side": "no",
+      "action": "buy",
+      "initial_count_fp": "100.00",
+      "yes_price_dollars": "0.6800",
+      "type": "limit",
+      "created_time": "2026-01-15T19:30:00Z"
+    }
+  ],
+  "prior_run": {
+    "run_ts": 1768428000,
+    "equity": 1485.43,
+    "net_deposits": 1300
+  }
+}
