@@ -83,8 +83,9 @@ holdings in the same market. So the engine keeps one number per market: a
 | `cash_drift` | The non-trading cash residual jumped since the previous run | New cash the engine can't account for |
 
 The per-market checks only cover markets the exchange still reports. Kalshi
-drops old markets from its positions endpoint, and on my account that's about
-700 of 4,800. The **cash identity** covers every market ever traded:
+drops old markets from its positions endpoint, so on a long-running account
+most markets are no longer checked one by one. The **cash identity** covers
+every market ever traded:
 
 ```
 lifetime cash P&L = (cash + positions at mark) − (deposits − withdrawals)
@@ -94,8 +95,8 @@ lifetime cash P&L = (cash + positions at mark) − (deposits − withdrawals)
 
 Non-trading cash is the interest Kalshi pays on balances plus any rewards.
 Neither appears in a fill or a settlement, so on a real account the identity
-never ties to zero. On mine it's $135.77 over 21 months, which matches
-interest at Kalshi's rate on the account's average balance. Instead of
+never ties to zero. In practice it comes out to a small positive amount that
+matches interest at Kalshi's rate on the account's average balance. Instead of
 pretending it's zero, the reconciliation treats it as its own line, and checks
 that it is:
 
@@ -115,10 +116,10 @@ number actually covers.
 
 - **Settlements age out too.** Kalshi moves old fills to a historical endpoint,
   and old settlements as well: they only survive as records in its historical
-  markets archive. Without that lookup, about 2,600 of my markets held to
-  expiry never closed in the engine, and the cash identity was off by $99,291.
-  Every per-market check still passed, because those markets were too old for
-  the exchange to report.
+  markets archive. Without that lookup, thousands of markets held to expiry
+  never closed in the engine, and the cash identity was off by tens of
+  thousands of dollars. Every per-market check still passed, because those
+  markets were too old for the exchange to report.
 - **The snapshot isn't instantaneous.** It takes a few seconds of API calls. A
   fill that lands between the positions call and the fills call makes them
   disagree for one run. Before a market break is reported, that market is

@@ -148,9 +148,9 @@ def test_cash_identity_break_when_cash_does_not_tie():
 
 def test_market_settled_before_the_live_window_closes_from_the_archive():
     """Regression. Kalshi's settlements endpoint only covers recent markets, and
-    its positions endpoint drops old ones entirely. On a live account with ~4,800
-    traded markets, ~2,600 old ones never closed in the engine, and the cash
-    identity was off by $99k with no per-market break to say why."""
+    its positions endpoint drops old ones entirely. On a live account, thousands of
+    old markets never closed in the engine, and the cash identity was far off
+    with no per-market break to say why."""
     old = "KXEXAMPLE-25JUN01-OLD"
     fills = [make_fill("yes", 100, 0.30, ticker=old)]
     archive = [{"ticker": old, "status": "finalized", "settlement_value_dollars": "1.0000"}]
